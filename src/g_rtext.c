@@ -14,13 +14,13 @@
 #include "s_stuff.h"
 #include "g_canvas.h"
 #include "s_utf8.h"
-
+#include "g_style.h"
 
 #define LMARGIN 2
 #define RMARGIN 2
 /* for some reason, it draws text 1 pixel lower on Mac OS X */
 #ifdef __APPLE__
-#define TMARGIN 3
+#define TMARGIN 4
 #define BMARGIN 1
 #else
 #define TMARGIN 4
@@ -313,7 +313,7 @@ static void rtext_senditup(t_rtext *x, int action, int *widthp, int *heightp,
             outchars_b, tempbuf,
             sys_hostfontsize(font, glist_getzoom(x->x_glist)),
             (glist_isselected(x->x_glist,
-                &x->x_glist->gl_gobj)? "blue" : "black"));
+                &x->x_glist->gl_gobj)? STYLE_TEXT_SELECT_COLOR : STYLE_TEXT_NORMAL_COLOR));
     }
     else if (action == SEND_UPDATE)
     {
@@ -458,7 +458,7 @@ void rtext_select(t_rtext *x, int state)
     t_glist *glist = x->x_glist;
     t_canvas *canvas = glist_getcanvas(glist);
     sys_vgui(".x%lx.c itemconfigure %s -fill %s\n", canvas,
-        x->x_tag, (state? "blue" : "black"));
+        x->x_tag, (state? STYLE_TEXT_SELECT_COLOR : STYLE_TEXT_NORMAL_COLOR));
 }
 
 void rtext_activate(t_rtext *x, int state)
@@ -517,7 +517,7 @@ void rtext_key(t_rtext *x, int keynum, t_symbol *keysym)
         x->x_buf = resizebytes(x->x_buf, x->x_bufsize, newsize);
         x->x_bufsize = newsize;
 
-/* at Guenter's suggestion, use 'n>31' to test wither a character might
+/* at Guenter's suggestion, use 'n>31' to test whether a character might
 be printable in whatever 8-bit character set we find ourselves. */
 
 /*-- moo:

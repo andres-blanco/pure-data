@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include "m_pd.h"
 #include "g_canvas.h"
+#include "g_style.h"
 
 #include "g_all_guis.h"
 #include <math.h>
@@ -33,22 +34,20 @@ void my_canvas_draw_new(t_my_canvas *x, t_glist *glist)
 {
     int xpos=text_xpix(&x->x_gui.x_obj, glist);
     int ypos=text_ypix(&x->x_gui.x_obj, glist);
-    int zoomlabel =
-        1 + (IEMGUI_ZOOM(x)-1) * (x->x_gui.x_ldx >= 0 && x->x_gui.x_ldy >= 0);
     t_canvas *canvas=glist_getcanvas(glist);
 
     sys_vgui(".x%lx.c create rectangle %d %d %d %d -fill #%06x -outline #%06x -tags %lxRECT\n",
              canvas, xpos, ypos,
-             xpos + x->x_vis_w*IEMGUI_ZOOM(x), ypos + x->x_vis_h*IEMGUI_ZOOM(x),
+             xpos + x->x_vis_w * IEMGUI_ZOOM(x), ypos + x->x_vis_h * IEMGUI_ZOOM(x),
              x->x_gui.x_bcol, x->x_gui.x_bcol, x);
     sys_vgui(".x%lx.c create rectangle %d %d %d %d -outline #%06x -tags %lxBASE\n",
              canvas, xpos, ypos,
-             xpos + x->x_gui.x_w, ypos + x->x_gui.x_h,
+             xpos + x->x_gui.x_w * IEMGUI_ZOOM(x), ypos + x->x_gui.x_h * IEMGUI_ZOOM(x),
              x->x_gui.x_bcol, x);
     sys_vgui(".x%lx.c create text %d %d -text {%s} -anchor w \
              -font {{%s} -%d %s} -fill #%06x -tags [list %lxLABEL label text]\n",
-             canvas, xpos+x->x_gui.x_ldx * zoomlabel,
-             ypos+x->x_gui.x_ldy * zoomlabel,
+             canvas, xpos+x->x_gui.x_ldx * IEMGUI_ZOOM(x),
+             ypos+x->x_gui.x_ldy * IEMGUI_ZOOM(x),
              strcmp(x->x_gui.x_lab->s_name, "empty")?x->x_gui.x_lab->s_name:"",
              x->x_gui.x_font, x->x_gui.x_fontsize, sys_fontweight,
              x->x_gui.x_lcol, x);
@@ -58,19 +57,17 @@ void my_canvas_draw_move(t_my_canvas *x, t_glist *glist)
 {
     int xpos=text_xpix(&x->x_gui.x_obj, glist);
     int ypos=text_ypix(&x->x_gui.x_obj, glist);
-    int zoomlabel =
-        1 + (IEMGUI_ZOOM(x)-1) * (x->x_gui.x_ldx >= 0 && x->x_gui.x_ldy >= 0);
     t_canvas *canvas=glist_getcanvas(glist);
 
     sys_vgui(".x%lx.c coords %lxRECT %d %d %d %d\n",
-             canvas, x, xpos, ypos, xpos + x->x_vis_w*IEMGUI_ZOOM(x),
-             ypos + x->x_vis_h*IEMGUI_ZOOM(x));
+             canvas, x, xpos, ypos, xpos + x->x_vis_w * IEMGUI_ZOOM(x),
+             ypos + x->x_vis_h * IEMGUI_ZOOM(x));
     sys_vgui(".x%lx.c coords %lxBASE %d %d %d %d\n",
              canvas, x, xpos, ypos,
              xpos + x->x_gui.x_w, ypos + x->x_gui.x_h);
     sys_vgui(".x%lx.c coords %lxLABEL %d %d\n",
-             canvas, x, xpos+x->x_gui.x_ldx * zoomlabel,
-             ypos+x->x_gui.x_ldy * zoomlabel);
+             canvas, x, xpos+x->x_gui.x_ldx * IEMGUI_ZOOM(x),
+             ypos+x->x_gui.x_ldy * IEMGUI_ZOOM(x));
 }
 
 void my_canvas_draw_erase(t_my_canvas* x, t_glist* glist)
@@ -91,7 +88,7 @@ void my_canvas_draw_config(t_my_canvas* x, t_glist* glist)
     sys_vgui(".x%lx.c itemconfigure %lxBASE -outline #%06x\n", canvas, x,
              x->x_gui.x_fsf.x_selected?IEM_GUI_COLOR_SELECTED:x->x_gui.x_bcol);
     sys_vgui(".x%lx.c itemconfigure %lxLABEL -font {{%s} -%d %s} -fill #%06x -text {%s} \n",
-             canvas, x, x->x_gui.x_font, x->x_gui.x_fontsize, sys_fontweight,
+             canvas, x, x->x_gui.x_font, x->x_gui.x_fontsize * IEMGUI_ZOOM(x), sys_fontweight,
              x->x_gui.x_lcol,
              strcmp(x->x_gui.x_lab->s_name, "empty")?x->x_gui.x_lab->s_name:"");
 }
@@ -102,7 +99,7 @@ void my_canvas_draw_select(t_my_canvas* x, t_glist* glist)
 
     if(x->x_gui.x_fsf.x_selected)
     {
-        sys_vgui(".x%lx.c itemconfigure %lxBASE -outline #%06x\n", canvas, x, IEM_GUI_COLOR_SELECTED);
+        sys_vgui(".x%lx.c itemconfigure %lxBASE -outline %s\n", canvas, x, STYLE_SELECT_COLOR);
     }
     else
     {

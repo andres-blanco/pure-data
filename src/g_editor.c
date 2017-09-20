@@ -8,6 +8,7 @@
 #include "m_imp.h"
 #include "s_stuff.h"
 #include "g_canvas.h"
+#include "g_style.h"
 #include "s_utf8.h" /*-- moo --*/
 #include <string.h>
 #ifdef _MSC_VER  /* This is only for Microsoft's compiler, not cygwin, e.g. */
@@ -163,8 +164,8 @@ void glist_selectline(t_glist *x, t_outconnect *oc, int index1,
         x->gl_editor->e_selectline_index2 = index2;
         x->gl_editor->e_selectline_inno = inno;
         x->gl_editor->e_selectline_tag = oc;
-        sys_vgui(".x%lx.c itemconfigure l%lx -fill blue\n",
-            x, x->gl_editor->e_selectline_tag);
+        sys_vgui(".x%lx.c itemconfigure l%lx -fill %s\n",
+            x, x->gl_editor->e_selectline_tag, STYLE_CORD_SELECTED);
     }
 }
 
@@ -173,8 +174,8 @@ void glist_deselectline(t_glist *x)
     if (x->gl_editor)
     {
         x->gl_editor->e_selectedline = 0;
-        sys_vgui(".x%lx.c itemconfigure l%lx -fill black\n",
-            x, x->gl_editor->e_selectline_tag);
+        sys_vgui(".x%lx.c itemconfigure l%lx -fill %s\n",
+            x, x->gl_editor->e_selectline_tag, STYLE_CORD_SELECTED);
     }
 }
 
@@ -1134,7 +1135,7 @@ static void canvas_donecanvasdialog(t_glist *x,
         perhaps we're happier with 0.  This is only checked if this is really
         being called, as intended, from the GUI.  For compatibility with old
         patches that reverse-engineered donecanvasdialog to modify patch
-        parameters, we leave the buggy behavior in wieh there's no "fromgui"
+        parameters, we leave the buggy behavior in when there's no "fromgui"
         argument supplied. */
     if (fromgui && (!(graphme & 1)))
         graphme = 0;
@@ -1413,9 +1414,9 @@ void canvas_doclick(t_canvas *x, int xpos, int ypos, int which,
                         x->gl_editor->e_xwas = xpos;
                         x->gl_editor->e_ywas = ypos;
                         sys_vgui(
-                          ".x%lx.c create line %d %d %d %d -width %d -tags x\n",
+                          ".x%lx.c create line %d %d %d %d -width %d -fill %s -tags x\n",
                                 x, xpos, ypos, xpos, ypos,
-                                    (issignal ? 2 : 1) * x->gl_zoom);
+                                    style_cord_width(x, ob, closest), STYLE_CORD_NORMAL);
                     }
                     else canvas_setcursor(x, CURSOR_EDITMODE_CONNECT);
                 }
@@ -1598,11 +1599,11 @@ void canvas_doconnect(t_canvas *x, int xpos, int ypos, int which, int doit)
                             + IOMIDDLE;
                 ly2 = y21;
                 sys_vgui(
-   ".x%lx.c create line %d %d %d %d -width %d -tags [list l%lx cord]\n",
+   ".x%lx.c create line %d %d %d %d -width %d -fill %s -tags [list l%lx cord]\n",
                     glist_getcanvas(x),
                         lx1, ly1, lx2, ly2,
-                        (obj_issignaloutlet(ob1, closest1) ? 2 : 1) *
-                            x->gl_zoom,
+                        style_cord_width(x, ob1, closest1),
+                        STYLE_CORD_NORMAL,
                         oc);
                 canvas_dirty(x, 1);
                 canvas_setundo(x, canvas_undo_connect,
@@ -2636,9 +2637,9 @@ void canvas_connect(t_canvas *x, t_floatarg fwhoout, t_floatarg foutno,
     if (glist_isvisible(x))
     {
         sys_vgui(
-    ".x%lx.c create line %d %d %d %d -width %d -tags [list l%lx cord]\n",
+    ".x%lx.c create line %d %d %d %d -width %d -fill %s -tags [list l%lx cord]\n",
             glist_getcanvas(x), 0, 0, 0, 0,
-            (obj_issignaloutlet(objsrc, outno) ? 2 : 1),oc);
+            style_cord_width(x, objsrc, outno), STYLE_CORD_NORMAL, oc);
         canvas_fixlinesfor(x, objsrc);
     }
     return;
