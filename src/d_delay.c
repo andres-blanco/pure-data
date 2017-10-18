@@ -5,11 +5,13 @@
 /*  send~, delread~, throw~, catch~ */
 
 #include "m_pd.h"
+
+#include <math.h>
 #include <string.h>
 extern int ugen_getsortno(void);
 
 #define DEFDELVS 64             /* LATER get this from canvas at DSP time */
-static const int delread_zero = 0;    /* four bytes of zero for delread~, vd~*/
+static int delread_zero = 0;    /* four bytes of zero for delread~, vd~ */
 
 /* ----------------------------- delwrite~ ----------------------------- */
 static t_class *sigdelwrite_class;
@@ -52,13 +54,6 @@ static void sigdelwrite_updatesr(t_sigdelwrite *x, t_float sr) /* added by Mathi
     }
 }
 
-static void sigdelwrite_clear (t_sigdelwrite *x) /* added by Orm Finnendahl */
-{
-  if (x->x_cspace.c_n > 0)
-    memset(x->x_cspace.c_vec, 0, sizeof(t_sample)*(x->x_cspace.c_n + XTRASAMPS));
-}
-
-
     /* routine to check that all delwrites/delreads/vds have same vecsize */
 static void sigdelwrite_checkvecsize(t_sigdelwrite *x, int vecsize)
 {
@@ -98,9 +93,47 @@ static t_int *sigdelwrite_perform(t_int *w)
     t_delwritectl *c = (t_delwritectl *)(w[2]);
     int n = (int)(w[3]);
     int phase = c->c_phase, nsamps = c->c_n;
-    t_sample *vp = c->c_vec, *bp = vp + phase, *ep = vp + (c->c_n + XTRASAMPS);
+    t_sample *vp = c->c_vec, *bp = vp + phase, *ep = vp + (nsamps + XTRASAMPS);
+    
+    // on copie 64 par 64 ... quand on arrive à la fin ... et on copie les 4 premiers dans les 4 derniers ...
+    // c'est une espèce de ring buffer avec 4 sample de décallage
+    //memcpy(bp, in, n*sizeof(t_sample));
+    int pos = phase;
     phase += n;
-
+    //ME
+    if (phase > nsamps) {
+        /*
+        int endN = phase - nsamps;
+        memcpy(bp, in, (endN+XTRASAMPS)*sizeof(t_sample));
+        
+        int remainingN = n - endN;
+        t_sample *dec_in = in + endN;
+        
+        memcpy(vp , dec_in, remainingN*sizeof(t_sample));
+        
+        phase -= nsamps;*/
+        
+        while (n--)
+        {
+            t_sample f = *in++;
+            if (PD_BIGORSMALL(f))
+                f = 0;
+            *bp++ = f;
+            if (bp == ep)
+            {
+                vp[0] = ep[-4];
+                vp[1] = ep[-3];
+                vp[2] = ep[-2];
+                vp[3] = ep[-1];
+                bp = vp + XTRASAMPS;
+                phase -= nsamps;
+            }
+        }
+    } else {
+        memcpy(bp, in, n*sizeof(t_sample));
+    }
+    //PUREDATA
+    /*
     while (n--)
     {
         t_sample f = *in++;
@@ -117,6 +150,10 @@ static t_int *sigdelwrite_perform(t_int *w)
             phase -= nsamps;
         }
     }
+     
+     */
+    
+    //END
     c->c_phase = phase;
     return (w+4);
 }
@@ -144,8 +181,6 @@ static void sigdelwrite_setup(void)
     CLASS_MAINSIGNALIN(sigdelwrite_class, t_sigdelwrite, x_f);
     class_addmethod(sigdelwrite_class, (t_method)sigdelwrite_dsp,
         gensym("dsp"), A_CANT, 0);
-    class_addmethod(sigdelwrite_class, (t_method)sigdelwrite_clear,
-                    gensym("clear"), 0);
 }
 
 /* ----------------------------- delread~ ----------------------------- */
@@ -204,10 +239,14 @@ static t_int *sigdelread_perform(t_int *w)
     if (phase < 0) phase += nsamps;
     bp = vp + phase;
 
-    while (n--)
-    {
-        *out++ = *bp++;
-        if (bp == ep) bp -= nsamps;
+    if ((phase + n) < nsamps) {
+        memcpy(out, bp, n*sizeof(t_sample));
+    } else {
+        while (n--)
+        {
+            *out++ = *bp++;
+            if (bp == ep) bp -= nsamps;
+        }
     }
     return (w+5);
 }

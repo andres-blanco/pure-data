@@ -8,6 +8,7 @@
 
 #include "m_pd.h"
 #include <math.h>
+#include "Accelerate/Accelerate.h"
 #define LOGTEN 2.302585092994
 
 /* ------------------------- clip~ -------------------------- */
@@ -39,13 +40,14 @@ static t_int *clip_perform(t_int *w)
     t_sample *in = (t_sample *)(w[2]);
     t_sample *out = (t_sample *)(w[3]);
     int n = (int)(w[4]);
-    while (n--)
+    vDSP_vclip(in, 1, &x->x_lo, &x->x_hi, out, 1, n);
+    /*while (n--)
     {
         t_sample f = *in++;
         if (f < x->x_lo) f = x->x_lo;
         if (f > x->x_hi) f = x->x_hi;
         *out++ = f;
-    }
+    }*/
     return (w+5);
 }
 
@@ -67,7 +69,6 @@ static void clip_setup(void)
 #define DUMTAB1SIZE 256
 #define DUMTAB2SIZE 1024
 
-/* These are only written at setup time when there's a global lock in place. */
 static float rsqrt_exptab[DUMTAB1SIZE], rsqrt_mantissatab[DUMTAB2SIZE];
 
 static void init_rsqrt(void)
@@ -258,21 +259,6 @@ static t_int *sigwrap_perform(t_int *w)
     {
         t_sample f = *in++;
         int k = f;
-        if (k <= f) *out++ = f-k;
-        else *out++ = f - (k-1);
-    }
-    return (w + 4);
-}
-
-     /* old buggy version that sometimes output 1 instead of 0 */
-static t_int *sigwrap_old_perform(t_int *w)
-{
-    t_sample *in = *(t_sample **)(w+1), *out = *(t_sample **)(w+2);
-    t_int n = *(t_int *)(w+3);
-    while (n--)
-    {
-        t_sample f = *in++;
-        int k = f;
         if (f > 0) *out++ = f-k;
         else *out++ = f - (k-1);
     }
@@ -281,9 +267,7 @@ static t_int *sigwrap_old_perform(t_int *w)
 
 static void sigwrap_dsp(t_sigwrap *x, t_signal **sp)
 {
-    dsp_add((pd_compatibilitylevel < 48 ?
-        sigwrap_old_perform : sigwrap_perform),
-            3, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
+    dsp_add(sigwrap_perform, 3, sp[0]->s_vec, sp[1]->s_vec, sp[0]->s_n);
 }
 
 void sigwrap_setup(void)

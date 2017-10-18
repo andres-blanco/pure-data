@@ -723,6 +723,7 @@ typedef struct sigrzero_rev
     t_object x_obj;
     t_float x_f;
     t_sample x_last;
+    
 } t_sigrzero_rev;
 
 t_class *sigrzero_rev_class;
@@ -818,8 +819,47 @@ static void *sigcpole_new(t_float re, t_float im)
     return (x);
 }
 
+#include <Accelerate/Accelerate.h>
+
 static t_int *sigcpole_perform(t_int *w)
 {
+    /*
+     t_sample *inre1 = (t_sample *)(w[1]);
+     t_sample *inim1 = (t_sample *)(w[2]);
+     t_sample *inre2 = (t_sample *)(w[3]);
+     t_sample *inim2 = (t_sample *)(w[4]);
+     t_sample *outre = (t_sample *)(w[5]);
+     t_sample *outim = (t_sample *)(w[6]);
+     t_sigcpole *x = (t_sigcpole *)(w[7]);
+     int n = (t_int)(w[8]);
+     int i;
+     t_sample lastre = x->x_lastre;
+     t_sample lastim = x->x_lastim;
+     
+     for (i = 0; i < n; i++)
+     {
+     t_sample nextre = *inre1++;
+     t_sample nextim = *inim1++;
+     t_sample coefre = *inre2++;
+     t_sample coefim = *inim2++;
+     
+     outre[i] = nextre + lastre * coefre - lastim * coefim;
+     outim[i] = nextim + lastre * coefim + lastim * coefre;
+     
+     lastim = outim[i];
+     lastre = outre[i];
+     }
+     
+     if (PD_BIGORSMALL(lastre))
+     lastre = 0;
+     if (PD_BIGORSMALL(lastim))
+     lastim = 0;
+     
+     x->x_lastre = lastre;
+     x->x_lastim = lastim;
+     return (w+9);
+     */
+    
     t_sample *inre1 = (t_sample *)(w[1]);
     t_sample *inim1 = (t_sample *)(w[2]);
     t_sample *inre2 = (t_sample *)(w[3]);
@@ -848,6 +888,7 @@ static t_int *sigcpole_perform(t_int *w)
     x->x_lastre = lastre;
     x->x_lastim = lastim;
     return (w+9);
+
 }
 
 static void sigcpole_dsp(t_sigcpole *x, t_signal **sp)
@@ -890,6 +931,9 @@ typedef struct sigczero
     t_float x_f;
     t_sample x_lastre;
     t_sample x_lastim;
+    
+    t_sample x_lastreArray[64];
+    t_sample x_lastimArray[64];
 } t_sigczero;
 
 t_class *sigczero_class;
@@ -911,8 +955,43 @@ static void *sigczero_new(t_float re, t_float im)
     return (x);
 }
 
+#include <Accelerate/Accelerate.h>
+#include <string.h>
+
 static t_int *sigczero_perform(t_int *w)
 {
+    /*
+    t_sample *inre1 = (t_sample *)(w[1]);
+    t_sample *inim1 = (t_sample *)(w[2]);
+    t_sample *inre2 = (t_sample *)(w[3]);
+    t_sample *inim2 = (t_sample *)(w[4]);
+    t_sample *outre = (t_sample *)(w[5]);
+    t_sample *outim = (t_sample *)(w[6]);
+    t_sigczero *x = (t_sigczero *)(w[7]);
+    int n = (t_int)(w[8]);
+    int i;
+    
+    x->x_lastreArray[0] = x->x_lastre;
+    x->x_lastimArray[0] = x->x_lastim;
+    
+    memcpy(x->x_lastreArray+1, inre1, (n-1)*sizeof(t_sample));
+    memcpy(x->x_lastimArray+1, inim1, (n-1)*sizeof(t_sample));
+    
+    x->x_lastre = inre1[n-1];
+    x->x_lastim = inim1[n-1];
+    
+    vDSP_vmul(x->x_lastreArray,1, inre2, 1, outre, 1, n);
+    vDSP_vsub(inre1, 1, outre, 1, outre, 1, n);
+    vDSP_vma(x->x_lastimArray, 1, inim2, 1, outre, 1, outre , 1, n);
+    
+    vDSP_vmul(x->x_lastreArray,1, inim2, 1, outim, 1, n);
+    vDSP_vsub(inim1, 1, outim, 1, outim, 1, n);
+    vDSP_vmul(x->x_lastimArray,1, inre2, 1, inre2, 1, n);
+    vDSP_vsub(outim, 1, inre2, 1, outim, 1, n);
+
+    return (w+9);
+     */
+    
     t_sample *inre1 = (t_sample *)(w[1]);
     t_sample *inim1 = (t_sample *)(w[2]);
     t_sample *inre2 = (t_sample *)(w[3]);
